@@ -3,8 +3,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Enhanced design system with better colors and typography */
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -92,20 +90,10 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-bold tracking-tight;
-  }
-
-  p {
-    @apply leading-relaxed;
+    @apply bg-background text-foreground;
   }
 }
 
-/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -120,30 +108,4 @@
 
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-muted-foreground/50;
-}
-
-/* Smooth animations */
-.animate-fade-in {
-  animation: fadeIn 0.5s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Enhanced button hover effects */
-.btn-hover-lift {
-  @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
-}
-
-/* Card hover effects */
-.card-hover {
-  @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-2;
 }
