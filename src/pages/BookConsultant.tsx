@@ -1,3 +1,4 @@
+
 import { Phone, MessageCircle, Calendar, Clock, Video, User, Mail, FileText, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +11,15 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Newsletter from "@/components/Newsletter";
 
+// Razorpay configuration
+const RAZORPAY_KEY_ID = "rzp_live_nCPwk9KL7c1gif";
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 const BookConsultant = () => {
   const [formData, setFormData] = useState({
     name: "",
@@ -20,45 +30,128 @@ const BookConsultant = () => {
   });
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Consultation Request Sent",
-      description: "We will contact you within 30 minutes for your consultation.",
-    });
-    setFormData({ name: "", email: "", phone: "", consultationType: "", message: "" });
-  };
-
   const consultationTypes = [
     {
       icon: Phone,
       title: "Phone Consultation",
       description: "Quick legal advice over phone call",
       duration: "15-30 minutes",
-      price: "₹500"
+      price: "₹500",
+      amount: 50000 // in paise (500 * 100)
     },
     {
       icon: Video,
       title: "Video Consultation",
       description: "Face-to-face consultation via video call",
       duration: "30-45 minutes", 
-      price: "₹800"
+      price: "₹800",
+      amount: 80000 // in paise (800 * 100)
     },
     {
       icon: MessageCircle,
       title: "WhatsApp Consultation",
       description: "Chat-based legal guidance",
       duration: "Ongoing support",
-      price: "₹300"
+      price: "₹300",
+      amount: 30000 // in paise (300 * 100)
     },
     {
       icon: FileText,
       title: "Document Review",
       description: "Comprehensive document analysis",
       duration: "2-3 hours",
-      price: "₹1500"
+      price: "₹1500",
+      amount: 150000 // in paise (1500 * 100)
     }
   ];
+
+  const getSelectedConsultationType = () => {
+    return consultationTypes.find(type => 
+      formData.consultationType === type.title.toLowerCase().replace(' ', '')
+    );
+  };
+
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handlePayment = async () => {
+    if (!formData.name || !formData.phone || !formData.consultationType || !formData.message) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields before proceeding to payment.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const selectedType = getSelectedConsultationType();
+    if (!selectedType) {
+      toast({
+        title: "Invalid Selection",
+        description: "Please select a valid consultation type.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const res = await loadRazorpayScript();
+    if (!res) {
+      toast({
+        title: "Payment Error",
+        description: "Razorpay SDK failed to load. Please check your internet connection.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const options = {
+      key: RAZORPAY_KEY_ID,
+      amount: selectedType.amount, // Amount in paise
+      currency: "INR",
+      name: "Advocate Ajay Shankar Sharma",
+      description: `${selectedType.title} - Legal Consultation`,
+      image: "/lovable-uploads/a5616b2f-0963-4545-87ba-000cd45c804a.png",
+      prefill: {
+        name: formData.name,
+        email: formData.email,
+        contact: formData.phone,
+      },
+      theme: {
+        color: "#2563eb", // Primary blue color
+      },
+      handler: function (response: any) {
+        toast({
+          title: "Payment Successful!",
+          description: `Payment ID: ${response.razorpay_payment_id}. We will contact you within 30 minutes for your consultation.`,
+        });
+        // Reset form after successful payment
+        setFormData({ name: "", email: "", phone: "", consultationType: "", message: "" });
+      },
+      modal: {
+        ondismiss: function() {
+          toast({
+            title: "Payment Cancelled",
+            description: "You can retry the payment anytime.",
+          });
+        }
+      }
+    };
+
+    const paymentObject = new window.Razorpay(options);
+    paymentObject.open();
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handlePayment();
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -72,7 +165,7 @@ const BookConsultant = () => {
               Book Your Legal Consultation
             </h1>
             <p className="text-lg md:text-xl lg:text-2xl text-muted-foreground mb-6 md:mb-8 leading-relaxed">
-              Get expert legal advice from Advocate Ajay Shankar Sharma. Choose your preferred consultation method and schedule your session today.
+              Get expert legal advice from Advocate Ajay Shankar Sharma. Choose your preferred consultation method and pay securely with Razorpay.
             </p>
             <div className="flex justify-center">
               <div className="w-40 h-52 md:w-48 md:h-64 rounded-xl overflow-hidden border-4 border-primary shadow-2xl">
@@ -121,7 +214,7 @@ const BookConsultant = () => {
             <Card className="border-2 border-primary/30">
               <CardContent className="p-6 md:p-8">
                 <h2 className="text-2xl md:text-3xl font-bold text-primary mb-4 md:mb-6 text-center">
-                  Book Your Consultation Now
+                  Book Your Consultation & Pay Now
                 </h2>
                 <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -173,10 +266,10 @@ const BookConsultant = () => {
                       className="w-full p-2 md:p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-1 text-sm md:text-base"
                     >
                       <option value="">Select consultation type</option>
-                      <option value="phone">Phone Consultation - ₹500</option>
-                      <option value="video">Video Consultation - ₹800</option>
-                      <option value="whatsapp">WhatsApp Consultation - ₹300</option>
-                      <option value="document">Document Review - ₹1500</option>
+                      <option value="phoneconsultation">Phone Consultation - ₹500</option>
+                      <option value="videoconsultation">Video Consultation - ₹800</option>
+                      <option value="whatsappconsultation">WhatsApp Consultation - ₹300</option>
+                      <option value="documentreview">Document Review - ₹1500</option>
                     </select>
                   </div>
 
@@ -193,9 +286,20 @@ const BookConsultant = () => {
                     />
                   </div>
 
-                  <Button type="submit" className="w-full text-base md:text-lg font-semibold py-3 md:py-4">
+                  {formData.consultationType && (
+                    <div className="bg-primary/10 p-4 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Selected Service:</span>
+                        <span className="text-primary font-bold">
+                          {getSelectedConsultationType()?.title} - {getSelectedConsultationType()?.price}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button type="submit" className="w-full text-base md:text-lg font-semibold py-3 md:py-4 bg-primary hover:bg-primary/90">
                     <Calendar className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                    Book Consultation Now
+                    Pay Now & Book Consultation
                   </Button>
                 </form>
               </CardContent>
@@ -230,8 +334,8 @@ const BookConsultant = () => {
             <Card className="text-center p-4 md:p-6 hover:shadow-lg transition-all duration-300">
               <CardContent className="p-4 md:p-6">
                 <Clock className="w-10 h-10 md:w-12 md:h-12 text-orange-500 mx-auto mb-3 md:mb-4" />
-                <h3 className="text-lg md:text-xl font-bold text-primary mb-2">Flexible Timing</h3>
-                <p className="text-muted-foreground text-sm md:text-base">Schedule consultations at your convenience, including evenings and weekends.</p>
+                <h3 className="text-lg md:text-xl font-bold text-primary mb-2">Secure Payment</h3>
+                <p className="text-muted-foreground text-sm md:text-base">Safe and secure payment processing through Razorpay with instant confirmation.</p>
               </CardContent>
             </Card>
           </div>
